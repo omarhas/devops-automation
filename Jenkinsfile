@@ -1,39 +1,47 @@
 pipeline {
     agent any
-    tools{
-        maven 'maven_3_5_0'
+    tools {
+        maven "MAVEN3"
+        
     }
     stages{
-        stage('Build Maven'){
-            steps{
-                checkout([$class: 'GitSCM', branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/Java-Techie-jt/devops-automation']]])
-                sh 'mvn clean install'
+        stage('build maven') {
+            steps {
+                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/omarhas/devops-automation']])
+                sh "mvn clean install"
             }
         }
-        stage('Build docker image'){
+        
+        stage('build dockerfile'){
+            
             steps{
                 script{
-                    sh 'docker build -t javatechie/devops-integration .'
+                    sh 'docker build -t omarhasni123/devops-integration .'
                 }
             }
         }
-        stage('Push image to Hub'){
+        
+        stage('push image to dockerhub'){
             steps{
                 script{
-                   withCredentials([string(credentialsId: 'dockerhub-pwd', variable: 'dockerhubpwd')]) {
-                   sh 'docker login -u javatechie -p ${dockerhubpwd}'
-
+                    withCredentials([string(credentialsId: 'dockerhubpwd', variable: 'dockerhubpwd')]) {
+    // some block
+                    sh 'docker login -u omarhasni123 -p ${dockerhubpwd}'
+                    sh 'docker push omarhasni123/devops-integration'
 }
-                   sh 'docker push javatechie/devops-integration'
                 }
             }
         }
-        stage('Deploy to k8s'){
-            steps{
-                script{
-                    kubernetesDeploy (configs: 'deploymentservice.yaml',kubeconfigId: 'k8sconfigpwd')
+                stage('Deploy from Docker Registry') {
+            steps {
+                script {
+                    sh "docker pull omarhasni123/devops-integration:latest"
+                    sh "docker run -d --name java-app -p 80:80 omarhasni123/devops-integration:latest"
                 }
             }
         }
+
+        
     }
+    
 }
